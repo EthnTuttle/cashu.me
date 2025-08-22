@@ -64,12 +64,27 @@ window.windowMixin = {
       }
       if (currency == "sat") return this.formatSat(value);
       if (currency == "msat") return this.fromMsat(value);
-      if (currency == "usd") value = value / 100;
-      if (currency == "eur") value = value / 100;
-      return new Intl.NumberFormat(window.LOCALE, {
-        style: "currency",
-        currency: currency,
-      }).format(value);
+      if (currency == "mana") return this.formatMana(value);
+      if (currency == "loot") return this.formatLoot(value);
+      
+      // Handle standard currencies with proper ISO codes
+      if (currency == "usd") {
+        value = value / 100;
+        return new Intl.NumberFormat(window.LOCALE, {
+          style: "currency",
+          currency: "USD",
+        }).format(value);
+      }
+      if (currency == "eur") {
+        value = value / 100;
+        return new Intl.NumberFormat(window.LOCALE, {
+          style: "currency",
+          currency: "EUR",
+        }).format(value);
+      }
+      
+      // Fallback for any other custom units - just format with unit name
+      return new Intl.NumberFormat(window.LOCALE).format(value) + " " + currency.toUpperCase();
       // + " " +
       // currency.toUpperCase()
     },
@@ -90,6 +105,14 @@ window.windowMixin = {
     fromMsat: function (value) {
       value = parseInt(value);
       return new Intl.NumberFormat(window.LOCALE).format(value) + " msat";
+    },
+    formatMana: function (value) {
+      value = parseInt(value);
+      return new Intl.NumberFormat(window.LOCALE).format(value) + " mana";
+    },
+    formatLoot: function (value) {
+      value = parseInt(value);
+      return new Intl.NumberFormat(window.LOCALE).format(value) + " loot";
     },
     notifyApiError: function (error) {
       var types = {

@@ -44,6 +44,13 @@ const routes = [
       { path: "", component: () => import("src/pages/TermsPage.vue") },
     ],
   },
+  {
+    path: "/ecash-browser",
+    component: () => import("layouts/FullscreenLayout.vue"),
+    children: [
+      { path: "", component: () => import("src/pages/EcashBrowser.vue") },
+    ],
+  },
 
   // Always leave this as last one,
   // but you can also remove it

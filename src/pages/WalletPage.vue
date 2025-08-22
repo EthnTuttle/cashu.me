@@ -77,6 +77,11 @@
             class="text-secondary"
             :label="$t('WalletPage.tabs.mints.label')"
           ></q-tab>
+          <q-tab
+            name="ecash"
+            class="text-secondary"
+            label="eCash"
+          ></q-tab>
         </q-tabs>
 
         <q-tab-panels
@@ -94,6 +99,30 @@
 
           <q-tab-panel name="mints" class="q-px-sm">
             <MintSettings />
+          </q-tab-panel>
+
+          <!-- ////////////////////// ECASH BROWSER ////////////////// -->
+
+          <q-tab-panel name="ecash" class="q-px-none">
+            <div class="text-center q-pa-lg">
+              <div class="text-h6 q-mb-md">eCash Proof Browser</div>
+              <div class="text-body2 text-grey-6 q-mb-lg">
+                Inspect your ecash proofs and view their cryptographic details
+              </div>
+              <q-btn
+                color="primary"
+                icon="search"
+                label="Open eCash Browser"
+                @click="$router.push('/ecash-browser')"
+                size="lg"
+                class="q-px-xl"
+              />
+              <div class="q-mt-md">
+                <div class="text-caption text-grey-5">
+                  {{ proofs.length }} proofs available for inspection
+                </div>
+              </div>
+            </div>
           </q-tab-panel>
         </q-tab-panels>
       </q-expansion-item>
@@ -320,6 +349,7 @@ export default {
       "showReceiveDialog",
     ]),
     ...mapWritableState(useUiStore, ["expandHistory"]),
+    ...mapState(useProofsStore, ["proofs"]),
     ...mapWritableState(useReceiveTokensStore, [
       "showReceiveTokens",
       "receiveData",

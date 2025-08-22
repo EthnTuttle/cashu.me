@@ -19,6 +19,8 @@ const unitTickerShortMap = {
   usd: "USD",
   eur: "EUR",
   msat: "msats",
+  mana: "mana",
+  loot: "loot",
 };
 
 export const useUiStore = defineStore("ui", {
@@ -90,6 +92,12 @@ export const useUiStore = defineStore("ui", {
     fromMsat: function (value: number) {
       return new Intl.NumberFormat(navigator.language).format(value) + " msat";
     },
+    formatMana: function (value: number) {
+      return new Intl.NumberFormat(navigator.language).format(value) + " mana";
+    },
+    formatLoot: function (value: number) {
+      return new Intl.NumberFormat(navigator.language).format(value) + " loot";
+    },
     formatCurrency: function (
       value: number,
       currency: string,
@@ -103,12 +111,27 @@ export const useUiStore = defineStore("ui", {
       }
       if (currency == "sat") return this.formatSat(value);
       if (currency == "msat") return this.fromMsat(value);
-      if (currency == "usd") value = value / 100;
-      if (currency == "eur") value = value / 100;
-      return new Intl.NumberFormat(navigator.language, {
-        style: "currency",
-        currency: currency,
-      }).format(value);
+      if (currency == "mana") return this.formatMana(value);
+      if (currency == "loot") return this.formatLoot(value);
+      
+      // Handle standard currencies with proper ISO codes
+      if (currency == "usd") {
+        value = value / 100;
+        return new Intl.NumberFormat(navigator.language, {
+          style: "currency",
+          currency: "USD",
+        }).format(value);
+      }
+      if (currency == "eur") {
+        value = value / 100;
+        return new Intl.NumberFormat(navigator.language, {
+          style: "currency",
+          currency: "EUR",
+        }).format(value);
+      }
+      
+      // Fallback for any other custom units - just format with unit name
+      return new Intl.NumberFormat(navigator.language).format(value) + " " + currency.toUpperCase();
       // + " " +
       // currency.toUpperCase()
     },

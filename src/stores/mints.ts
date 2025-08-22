@@ -226,8 +226,12 @@ export const useMintsStore = defineStore("mints", {
         return "EUR";
       } else if (activeUnit == "msat") {
         return "mSAT";
+      } else if (activeUnit == "mana") {
+        return "MANA";
+      } else if (activeUnit == "loot") {
+        return "LOOT";
       } else {
-        return activeUnit;
+        return activeUnit.toUpperCase();
       }
     },
     activeUnitCurrencyMultiplyer({ activeUnit }): number {

@@ -13,9 +13,6 @@
         />
         <q-toolbar-title>
           Manastr Arsenal
-          <q-icon name="info" size="sm" class="q-ml-sm">
-            <q-tooltip>View and manage your magical units and their properties</q-tooltip>
-          </q-icon>
         </q-toolbar-title>
         <q-space />
         <div class="text-caption">
@@ -142,21 +139,26 @@
               <div class="col">
                 <div class="text-h6">
                   {{ getUnitName(selectedProof) }}
-                  <q-icon name="info" size="sm" class="q-ml-sm">
-                    <q-tooltip>{{ getUnitTypeName(selectedProof.amount) }} from {{ getKingdomAgeName(selectedProof.id) }}</q-tooltip>
-                  </q-icon>
                 </div>
                 <div class="text-caption" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-6'">
                   {{ getUnitTypeName(selectedProof.amount) }} • {{ formatAmount(selectedProof.amount) }} {{ activeUnitLabel }}
+                </div>
+                <!-- Inline Unit Description -->
+                <div class="unit-description q-mt-sm">
+                  <div class="text-body2" :class="$q.dark.isActive ? 'text-grey-3' : 'text-grey-7'">
+                    {{ getUnitTypeDescription(selectedProof.amount) }}
+                  </div>
                 </div>
               </div>
               <div class="col-auto">
                 <q-badge 
                   :color="selectedProof.reserved ? 'warning' : 'positive'"
                   :label="selectedProof.reserved ? 'Deployed' : 'Ready'"
-                >
-                  <q-tooltip>{{ selectedProof.reserved ? 'This unit is currently deployed in battle' : 'This unit is ready for combat' }}</q-tooltip>
-                </q-badge>
+                  class="q-mb-sm"
+                />
+                <div class="text-caption text-center" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-6'">
+                  {{ selectedProof.reserved ? 'Fighting in battle' : 'Available for deployment' }}
+                </div>
               </div>
             </div>
             <q-separator />
@@ -172,67 +174,74 @@
                   <div class="text-h6 q-mb-sm">
                     <q-icon name="auto_awesome" class="q-mr-sm" />
                     Magical Properties
-                    <q-icon name="info" size="sm" class="q-ml-sm">
-                      <q-tooltip>Properties derived from the unit's unique magical signature</q-tooltip>
-                    </q-icon>
                   </div>
                   
-                  <!-- Decoded Properties from C Value -->
+                  <!-- Gaming Explanation -->
+                  <div class="explanation-text q-mb-md">
+                    <div class="text-body2 q-mb-sm">
+                      🎮 <strong>Gaming:</strong> These combat stats are derived from your unit's unique <strong>Magical Signature (C value)</strong> - 
+                      a cryptographic fingerprint that ensures stats are unpredictable, tamper-proof, and verifiable by anyone.
+                    </div>
+                    <div class="text-caption">
+                      🔧 <strong>Technical:</strong> Different segments of the 256-bit C value are hashed to generate deterministic properties. 
+                      Same C value always produces same stats, but impossible to predict before minting.
+                    </div>
+                  </div>
+                  
+                  <!-- Property Stats Display -->
                   <div class="unit-properties">
                     <div class="row q-gutter-md q-mb-md">
                       <div class="col">
-                        <div class="text-subtitle2">
-                          <q-icon name="flash_on" class="q-mr-xs" />
-                          Power Level
-                          <q-icon name="info" size="xs" class="q-ml-xs">
-                            <q-tooltip>Combat effectiveness derived from magical signature</q-tooltip>
-                          </q-icon>
+                        <div class="property-card">
+                          <div class="text-subtitle2 q-mb-xs">
+                            <q-icon name="flash_on" class="q-mr-xs" />
+                            Power Level
+                          </div>
+                          <div class="text-h4 text-weight-bold q-mb-xs">{{ getUnitPower(selectedProof) }}</div>
+                          <div class="text-caption">Combat effectiveness</div>
                         </div>
-                        <div class="text-h4 text-weight-bold">{{ getUnitPower(selectedProof) }}</div>
                       </div>
                       <div class="col">
-                        <div class="text-subtitle2">
-                          <q-icon name="shield" class="q-mr-xs" />
-                          Defense
-                          <q-icon name="info" size="xs" class="q-ml-xs">
-                            <q-tooltip>Defensive capabilities from magical essence</q-tooltip>
-                          </q-icon>
+                        <div class="property-card">
+                          <div class="text-subtitle2 q-mb-xs">
+                            <q-icon name="shield" class="q-mr-xs" />
+                            Defense
+                          </div>
+                          <div class="text-h4 text-weight-bold q-mb-xs">{{ getUnitDefense(selectedProof) }}</div>
+                          <div class="text-caption">Damage resistance</div>
                         </div>
-                        <div class="text-h4 text-weight-bold">{{ getUnitDefense(selectedProof) }}</div>
                       </div>
                     </div>
                     
                     <div class="row q-gutter-md">
                       <div class="col">
-                        <div class="text-subtitle2">
+                        <div class="text-subtitle2 q-mb-xs">
                           <q-icon name="psychology" class="q-mr-xs" />
                           Element
-                          <q-icon name="info" size="xs" class="q-ml-xs">
-                            <q-tooltip>Elemental affinity determined by magical signature</q-tooltip>
-                          </q-icon>
                         </div>
                         <q-chip 
                           :color="getElementColor(getUnitElement(selectedProof))" 
                           text-color="white" 
                           :icon="getElementIcon(getUnitElement(selectedProof))"
+                          class="q-mb-xs"
                         >
                           {{ getUnitElement(selectedProof) }}
                         </q-chip>
+                        <div class="text-caption">Strengths & weaknesses</div>
                       </div>
                       <div class="col">
-                        <div class="text-subtitle2">
+                        <div class="text-subtitle2 q-mb-xs">
                           <q-icon name="star" class="q-mr-xs" />
                           Rarity
-                          <q-icon name="info" size="xs" class="q-ml-xs">
-                            <q-tooltip>Rarity tier based on magical pattern complexity</q-tooltip>
-                          </q-icon>
                         </div>
                         <q-chip 
                           :color="getRarityColor(getUnitRarity(selectedProof))" 
                           text-color="white"
+                          class="q-mb-xs"
                         >
                           {{ getUnitRarity(selectedProof) }}
                         </q-chip>
+                        <div class="text-caption">{{ getUnitRarity(selectedProof) === 'Legendary' ? '<0.1% chance' : getUnitRarity(selectedProof) === 'Epic' ? '<1% chance' : getUnitRarity(selectedProof) === 'Rare' ? '<5% chance' : getUnitRarity(selectedProof) === 'Uncommon' ? '<20% chance' : '80% chance' }}</div>
                       </div>
                     </div>
                   </div>
@@ -243,198 +252,221 @@
               <div class="proof-fields">
                 
                 <!-- Kingdom Age Details -->
-                <q-expansion-item
-                  expand-separator
-                  icon="castle"
-                  :label="`Kingdom Age: ${getKingdomAgeName(selectedProof.id)}`"
-                  :header-inset-level="0.5"
-                  :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-white'"
-                >
-                  <template v-slot:header>
-                    <q-item-section avatar>
-                      <q-icon name="castle" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label>Kingdom Age: {{ getKingdomAgeName(selectedProof.id) }}</q-item-label>
-                      <q-item-label caption>
-                        <q-icon name="info" size="xs" class="q-mr-xs">
-                          <q-tooltip>The era when this unit's magical essence was forged</q-tooltip>
-                        </q-icon>
-                        Era of magical creation
-                      </q-item-label>
-                    </q-item-section>
-                  </template>
-                  
-                  <div class="q-pa-md" :class="$q.dark.isActive ? 'bg-grey-8' : 'bg-grey-1'">
-                    <div class="text-body2 q-mb-sm">
-                      <strong>Age:</strong> {{ getKingdomAgeName(selectedProof.id) }}
+                <q-card flat bordered class="q-mb-sm">
+                  <q-card-section class="q-pb-sm">
+                    <div class="row items-start">
+                      <div class="col-auto q-mr-md">
+                        <q-avatar :color="getKingdomAgeColor(selectedProof.id)" text-color="white" size="md">
+                          <q-icon name="castle" />
+                        </q-avatar>
+                      </div>
+                      <div class="col">
+                        <div class="text-h6 q-mb-xs">Kingdom Age: {{ getKingdomAgeName(selectedProof.id) }}</div>
+                        
+                        <!-- Inline Explanation -->
+                        <div class="explanation-text q-mb-sm">
+                          <div class="text-body2 q-mb-xs">
+                            🎮 <strong>Gaming:</strong> Units from the same Kingdom Age share similar magical aesthetics and historical context. 
+                            Your unit was forged during the <strong>{{ getKingdomAgeName(selectedProof.id) }}</strong>.
+                          </div>
+                          <div class="text-caption" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-6'">
+                            🔧 <strong>Technical:</strong> Ages are determined by your token's <strong>keyset ID</strong> - the cryptographic keys 
+                            used by the mint. Units minted around the same time share the same age.
+                          </div>
+                        </div>
+
+                        <div class="technical-data">
+                          <div class="text-body2 q-mb-xs">
+                            <strong>Era Signature:</strong> 
+                            <span class="monospace-text" :class="$q.dark.isActive ? 'bg-grey-7' : 'bg-grey-2'">
+                              {{ selectedProof.id.substring(0, 8) }}...
+                            </span>
+                          </div>
+                          <div class="text-caption" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-6'">
+                            Full Keyset ID: {{ selectedProof.id }}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div class="text-body2 q-mb-sm">
-                      <strong>Era Signature:</strong> 
-                      <span class="monospace-text" :class="$q.dark.isActive ? 'bg-grey-7' : 'bg-grey-2'">
-                        {{ selectedProof.id.substring(0, 8) }}...
-                      </span>
-                    </div>
-                    <div class="text-caption" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-6'">
-                      Full ID: {{ selectedProof.id }}
-                    </div>
-                  </div>
-                </q-expansion-item>
+                  </q-card-section>
+                </q-card>
 
                 <!-- Arcane Essence -->
-                <q-expansion-item
-                  expand-separator
-                  icon="auto_awesome"
-                  label="Arcane Essence"
-                  :header-inset-level="0.5"
-                  :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-white'"
-                >
-                  <template v-slot:header>
-                    <q-item-section avatar>
-                      <q-icon name="auto_awesome" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label>Arcane Essence</q-item-label>
-                      <q-item-label caption>
-                        <q-icon name="info" size="xs" class="q-mr-xs">
-                          <q-tooltip>The unique magical signature that defines this unit's properties</q-tooltip>
-                        </q-icon>
-                        Unique magical identifier
-                      </q-item-label>
-                    </q-item-section>
-                  </template>
-                  
-                  <div class="q-pa-md" :class="$q.dark.isActive ? 'bg-grey-8' : 'bg-grey-1'">
-                    <div class="text-body2 q-mb-sm">
-                      <strong>Essence Pattern:</strong> 
-                      <span class="monospace-text" :class="$q.dark.isActive ? 'bg-grey-7' : 'bg-grey-2'">
-                        {{ selectedProof.secret.substring(0, 16) }}...
-                      </span>
+                <q-card flat bordered class="q-mb-sm">
+                  <q-card-section class="q-pb-sm">
+                    <div class="row items-start">
+                      <div class="col-auto q-mr-md">
+                        <q-avatar color="deep-purple" text-color="white" size="md">
+                          <q-icon name="auto_awesome" />
+                        </q-avatar>
+                      </div>
+                      <div class="col">
+                        <div class="text-h6 q-mb-xs">Arcane Essence</div>
+                        
+                        <!-- Inline Explanation -->
+                        <div class="explanation-text q-mb-sm">
+                          <div class="text-body2 q-mb-xs">
+                            🎮 <strong>Gaming:</strong> Your unit's unique magical DNA - like a fingerprint that makes it one-of-a-kind. 
+                            Used to generate instance number <strong>{{ getUnitInstance(selectedProof) }}</strong> and proves ownership.
+                          </div>
+                          <div class="text-caption" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-6'">
+                            🔧 <strong>Technical:</strong> This is your Cashu token's <strong>secret</strong> - a cryptographic key that authorizes 
+                            spending. Never share this value!
+                          </div>
+                        </div>
+
+                        <div class="technical-data">
+                          <div class="text-body2 q-mb-xs">
+                            <strong>Essence Pattern:</strong> 
+                            <span class="monospace-text" :class="$q.dark.isActive ? 'bg-grey-7' : 'bg-grey-2'">
+                              {{ selectedProof.secret.substring(0, 16) }}...
+                            </span>
+                          </div>
+                          <div class="text-caption text-warning">
+                            ⚠️ Keep this secret safe - losing it means losing your unit permanently
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div class="text-caption" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-6'">
-                      This pattern determines the unit's unique abilities and characteristics
-                    </div>
-                  </div>
-                </q-expansion-item>
+                  </q-card-section>
+                </q-card>
 
                 <!-- Magical Signature -->
-                <q-expansion-item
-                  expand-separator
-                  icon="fingerprint"
-                  label="Magical Signature (C)"
-                  :header-inset-level="0.5"
-                  :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-white'"
-                >
-                  <template v-slot:header>
-                    <q-item-section avatar>
-                      <q-icon name="fingerprint" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label>Magical Signature</q-item-label>
-                      <q-item-label caption>
-                        <q-icon name="info" size="xs" class="q-mr-xs">
-                          <q-tooltip>The cryptographic signature that validates this unit's magical authenticity</q-tooltip>
-                        </q-icon>
-                        Authenticity validation
-                      </q-item-label>
-                    </q-item-section>
-                  </template>
-                  
-                  <div class="q-pa-md" :class="$q.dark.isActive ? 'bg-grey-8' : 'bg-grey-1'">
-                    <div class="text-body2 q-mb-sm">
-                      <strong>Signature Hash:</strong> 
-                      <span class="monospace-text" :class="$q.dark.isActive ? 'bg-grey-7' : 'bg-grey-2'">
-                        {{ selectedProof.C.substring(0, 20) }}...
-                      </span>
+                <q-card flat bordered class="q-mb-sm">
+                  <q-card-section class="q-pb-sm">
+                    <div class="row items-start">
+                      <div class="col-auto q-mr-md">
+                        <q-avatar color="primary" text-color="white" size="md">
+                          <q-icon name="fingerprint" />
+                        </q-avatar>
+                      </div>
+                      <div class="col">
+                        <div class="text-h6 q-mb-xs">Magical Signature (C Value)</div>
+                        
+                        <!-- Inline Explanation -->
+                        <div class="explanation-text q-mb-sm">
+                          <div class="text-body2 q-mb-xs">
+                            🎮 <strong>Gaming:</strong> Like a tamper-proof certificate of authenticity - proves your unit was created by the 
+                            official Manastr mint and provides the randomness for all magical properties above.
+                          </div>
+                          <div class="text-caption" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-6'">
+                            🔧 <strong>Technical:</strong> The <strong>C value</strong> is the mint's blind signature on your token. 
+                            Mathematically impossible to forge, enables offline verification.
+                          </div>
+                        </div>
+
+                        <div class="technical-data">
+                          <div class="text-body2 q-mb-xs">
+                            <strong>Signature Hash:</strong> 
+                            <span class="monospace-text" :class="$q.dark.isActive ? 'bg-grey-7' : 'bg-grey-2'">
+                              {{ selectedProof.C.substring(0, 20) }}...
+                            </span>
+                          </div>
+                          <div class="text-caption text-positive">
+                            ✓ Cryptographically verified - this unit is authentic
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div class="text-caption" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-6'">
-                      This signature proves the unit's legitimacy and is used to derive its properties
-                    </div>
-                  </div>
-                </q-expansion-item>
+                  </q-card-section>
+                </q-card>
 
                 <!-- Authenticity Seal (DLEQ) -->
-                <q-expansion-item
-                  v-if="selectedProof.dleq"
-                  expand-separator
-                  icon="verified_user"
-                  label="Authenticity Seal"
-                  :header-inset-level="0.5"
-                  :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-white'"
-                >
-                  <template v-slot:header>
-                    <q-item-section avatar>
-                      <q-icon name="verified_user" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label>Authenticity Seal</q-item-label>
-                      <q-item-label caption>
-                        <q-icon name="info" size="xs" class="q-mr-xs">
-                          <q-tooltip>Advanced cryptographic proof ensuring this unit cannot be counterfeited</q-tooltip>
-                        </q-icon>
-                        Anti-forgery protection
-                      </q-item-label>
-                    </q-item-section>
-                  </template>
-                  
-                  <div class="q-pa-md" :class="$q.dark.isActive ? 'bg-grey-8' : 'bg-grey-1'">
-                    <div class="text-body2 q-mb-sm">
-                      <strong>Seal Alpha:</strong> 
-                      <span class="monospace-text" :class="$q.dark.isActive ? 'bg-grey-7' : 'bg-grey-2'">
-                        {{ selectedProof.dleq.e.substring(0, 12) }}...
-                      </span>
-                    </div>
-                    <div class="text-body2">
-                      <strong>Seal Beta:</strong>
-                      <span class="monospace-text" :class="$q.dark.isActive ? 'bg-grey-7' : 'bg-grey-2'">
-                        {{ selectedProof.dleq.s.substring(0, 12) }}...
-                      </span>
-                    </div>
-                  </div>
-                </q-expansion-item>
+                <q-card v-if="selectedProof.dleq" flat bordered class="q-mb-sm">
+                  <q-card-section class="q-pb-sm">
+                    <div class="row items-start">
+                      <div class="col-auto q-mr-md">
+                        <q-avatar color="green" text-color="white" size="md">
+                          <q-icon name="verified_user" />
+                        </q-avatar>
+                      </div>
+                      <div class="col">
+                        <div class="text-h6 q-mb-xs">Authenticity Seal (DLEQ Proof)</div>
+                        
+                        <!-- Inline Explanation -->
+                        <div class="explanation-text q-mb-sm">
+                          <div class="text-body2 q-mb-xs">
+                            🎮 <strong>Gaming:</strong> Maximum security protection - your unit has the highest level of authenticity 
+                            guarantees possible. Future-proof against even theoretical quantum computer attacks.
+                          </div>
+                          <div class="text-caption" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-6'">
+                            🔧 <strong>Technical:</strong> DLEQ (Discrete Log Equality) proof mathematically proves the mint used 
+                            consistent keys without revealing private information.
+                          </div>
+                        </div>
 
-                <!-- Battle Orders -->
-                <q-expansion-item
-                  expand-separator
-                  icon="military_tech"
-                  label="Battle Status"
-                  :header-inset-level="0.5"
-                  :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-white'"
-                >
-                  <template v-slot:header>
-                    <q-item-section avatar>
-                      <q-icon name="military_tech" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label>Battle Status</q-item-label>
-                      <q-item-label caption>
-                        <q-icon name="info" size="xs" class="q-mr-xs">
-                          <q-tooltip>Current deployment and availability status</q-tooltip>
-                        </q-icon>
-                        Deployment information
-                      </q-item-label>
-                    </q-item-section>
-                  </template>
-                  
-                  <div class="q-pa-md" :class="$q.dark.isActive ? 'bg-grey-8' : 'bg-grey-1'">
-                    <div class="text-body2 q-mb-sm">
-                      <strong>Status:</strong> 
-                      <q-chip 
-                        :color="selectedProof.reserved ? 'warning' : 'positive'"
-                        text-color="white"
-                        size="sm"
-                      >
-                        {{ selectedProof.reserved ? 'Deployed in Battle' : 'Ready for Combat' }}
-                      </q-chip>
+                        <div class="technical-data">
+                          <div class="text-body2 q-mb-xs">
+                            <strong>Seal Alpha:</strong> 
+                            <span class="monospace-text" :class="$q.dark.isActive ? 'bg-grey-7' : 'bg-grey-2'">
+                              {{ selectedProof.dleq.e.substring(0, 12) }}...
+                            </span>
+                          </div>
+                          <div class="text-body2 q-mb-xs">
+                            <strong>Seal Beta:</strong>
+                            <span class="monospace-text" :class="$q.dark.isActive ? 'bg-grey-7' : 'bg-grey-2'">
+                              {{ selectedProof.dleq.s.substring(0, 12) }}...
+                            </span>
+                          </div>
+                          <div class="text-caption text-positive">
+                            🛡️ Premium security - quantum-resistant protection
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div v-if="selectedProof.quote" class="text-body2">
-                      <strong>Mission ID:</strong> {{ selectedProof.quote }}
+                  </q-card-section>
+                </q-card>
+
+                <!-- Battle Status -->
+                <q-card flat bordered class="q-mb-sm">
+                  <q-card-section class="q-pb-sm">
+                    <div class="row items-start">
+                      <div class="col-auto q-mr-md">
+                        <q-avatar :color="selectedProof.reserved ? 'warning' : 'positive'" text-color="white" size="md">
+                          <q-icon name="military_tech" />
+                        </q-avatar>
+                      </div>
+                      <div class="col">
+                        <div class="text-h6 q-mb-xs">Battle Status</div>
+                        
+                        <!-- Inline Explanation -->
+                        <div class="explanation-text q-mb-sm">
+                          <div class="text-body2 q-mb-xs">
+                            🎮 <strong>Gaming:</strong> Shows whether your unit is available for battle or currently deployed. 
+                            Manage your army efficiently - always keep some units in reserve!
+                          </div>
+                          <div class="text-caption" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-6'">
+                            🔧 <strong>Technical:</strong> The <strong>reserved</strong> flag prevents double-spending during battles. 
+                            Units are locked while in use, then released when battles complete.
+                          </div>
+                        </div>
+
+                        <div class="technical-data">
+                          <div class="text-body2 q-mb-sm">
+                            <strong>Current Status:</strong> 
+                            <q-chip 
+                              :color="selectedProof.reserved ? 'warning' : 'positive'"
+                              text-color="white"
+                              size="sm"
+                              class="q-ml-sm"
+                            >
+                              {{ selectedProof.reserved ? 'Deployed in Battle' : 'Ready for Combat' }}
+                            </q-chip>
+                          </div>
+                          <div v-if="selectedProof.quote" class="text-body2 q-mb-xs">
+                            <strong>Mission ID:</strong> 
+                            <span class="monospace-text" :class="$q.dark.isActive ? 'bg-grey-7' : 'bg-grey-2'">
+                              {{ selectedProof.quote }}
+                            </span>
+                          </div>
+                          <div class="text-caption" :class="selectedProof.reserved ? 'text-warning' : 'text-positive'">
+                            {{ selectedProof.reserved ? '⚔️ Currently fighting - will return when battle ends' : '✓ Available for immediate deployment' }}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div v-if="!selectedProof.reserved" class="text-caption" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-6'">
-                      This unit is available for immediate deployment
-                    </div>
-                  </div>
-                </q-expansion-item>
+                  </q-card-section>
+                </q-card>
 
               </div>
             </div>
@@ -459,6 +491,7 @@
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
@@ -817,6 +850,7 @@ export default defineComponent({
       return colors[rarity] || 'grey';
     };
     
+    
     return {
       proofs,
       selectedProof,
@@ -967,6 +1001,72 @@ export default defineComponent({
 
 .body--light .proof-fields .q-expansion-item {
   border-color: #e0e0e0;
+}
+
+/* Inline explanation styles */
+.explanation-text {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 8px 12px;
+  border-left: 3px solid rgba(255, 255, 255, 0.3);
+}
+
+.body--dark .explanation-text {
+  background: rgba(255, 255, 255, 0.05);
+  border-left-color: rgba(255, 255, 255, 0.2);
+}
+
+.body--light .explanation-text {
+  background: rgba(0, 0, 0, 0.05);
+  border-left-color: rgba(0, 0, 0, 0.15);
+}
+
+.property-card {
+  padding: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.body--dark .property-card {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.body--light .property-card {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.technical-data {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+
+.body--dark .technical-data {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.body--light .technical-data {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.unit-description {
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* Better spacing for inline sections */
+.proof-fields .q-card {
+  transition: all 0.2s ease;
+}
+
+.proof-fields .q-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.body--dark .proof-fields .q-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* Mobile responsiveness */

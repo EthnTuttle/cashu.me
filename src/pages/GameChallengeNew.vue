@@ -631,29 +631,29 @@
               <q-card-section>
                 <div class="row items-center q-mb-sm">
                   <div class="col">
-                    <div class="text-h6">{{ challenge.challenger_name || 'Anonymous Warrior' }}</div>
-                    <div class="text-caption text-grey-6">{{ challenge.battle_type }}</div>
+                    <div class="text-h6">{{ challenge.challengerName || 'Anonymous Warrior' }}</div>
+                    <div class="text-caption text-grey-6">{{ challenge.battleType }}</div>
                   </div>
                   <div class="col-auto">
                     <q-chip color="primary" text-color="white" size="sm">
-                      {{ challenge.wager }} {{ challenge.unit || 'mana' }}
+                      {{ challenge.wagerAmount }} {{ challenge.wagerUnit || 'mana' }}
                     </q-chip>
                   </div>
                 </div>
                 
                 <div class="challenge-message q-mb-md">
-                  {{ challenge.content || 'Battle challenge issued!' }}
+                  {{ challenge.message || 'Battle challenge issued!' }}
                 </div>
                 
                 <div class="challenge-stats q-mb-md">
                   <q-chip size="xs" color="red" text-color="white" class="q-mr-xs">
-                    ⚔️ {{ challenge.total_power }} Power
+                    ⚔️ {{ challenge.totalPower }} Power
                   </q-chip>
                   <q-chip size="xs" color="blue" text-color="white" class="q-mr-xs">
-                    🛡️ {{ challenge.total_defense }} Defense
+                    🛡️ {{ challenge.totalDefense }} Defense
                   </q-chip>
                   <q-chip size="xs" color="grey" text-color="white">
-                    👥 {{ challenge.unit_count }} Units
+                    👥 {{ challenge.unitCount }} Units
                   </q-chip>
                 </div>
               </q-card-section>
@@ -691,8 +691,8 @@
               <q-card-section>
                 <div class="row items-center q-mb-sm">
                   <div class="col">
-                    <div class="text-h6">{{ challenge.battle_type }} Challenge</div>
-                    <div class="text-caption text-grey-6">{{ challenge.wager }} {{ challenge.unit || 'mana' }} wager</div>
+                    <div class="text-h6">{{ challenge.battleType }} Challenge</div>
+                    <div class="text-caption text-grey-6">{{ challenge.wagerAmount }} {{ challenge.wagerUnit || 'mana' }} wager</div>
                   </div>
                   <div class="col-auto">
                     <q-badge 
@@ -703,15 +703,15 @@
                 </div>
                 
                 <div class="challenge-message q-mb-md">
-                  {{ challenge.content || 'Challenge issued!' }}
+                  {{ challenge.message || 'Challenge issued!' }}
                 </div>
                 
                 <div class="challenge-stats">
                   <q-chip size="xs" color="grey" text-color="white" class="q-mr-xs">
-                    👥 {{ challenge.unit_count }} Units
+                    👥 {{ challenge.unitCount }} Units
                   </q-chip>
                   <q-chip size="xs" color="grey" text-color="white">
-                    ⏱️ {{ challenge.time_limit }}
+                    ⏱️ {{ challenge.timeLimit }}
                   </q-chip>
                 </div>
               </q-card-section>
@@ -759,6 +759,7 @@
 import { defineComponent, ref, computed, onMounted } from 'vue';
 import { useProofsStore } from '../stores/proofs';
 import { useMintsStore } from '../stores/mints';
+import { useGameEventsStore } from '../stores/gameEvents';
 import { useQuasar } from 'quasar';
 import * as GameUtils from '../utils/gameUtils';
 
@@ -768,6 +769,7 @@ export default defineComponent({
     const $q = useQuasar();
     const proofsStore = useProofsStore();
     const mintsStore = useMintsStore();
+    const gameEventsStore = useGameEventsStore();
     
     // Core data
     const selectedUnits = ref([]);
@@ -801,15 +803,23 @@ export default defineComponent({
     
     const elementOptions = GameUtils.GAME_ELEMENTS;
 
-    // Real challenge data (empty initially - to be populated from relay)
-    const incomingChallenges = ref([]);
-    const myChallenges = ref([]);
+    // Use reactive data from game events store
+    const incomingChallenges = computed(() => gameEventsStore.incomingChallenges);
+    const myChallenges = computed(() => gameEventsStore.myChallenges);
     
-    // Load challenges from relay on mount
-    const loadChallenges = async () => {
-      // TODO: Implement Nostr relay query for challenges
-      // This should query for battle challenge events from the relay
-      console.log('Loading challenges from relay...');
+    // Initialize game events
+    const initializeGameEvents = async () => {
+      try {
+        await gameEventsStore.initializeGameEvents();
+        console.log('Game events initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize game events:', error);
+        $q.notify({
+          type: 'warning',
+          message: 'Could not connect to game network. Some features may not work.',
+          position: 'top'
+        });
+      }
     };
 
     // Computed properties - use reactive state, not async action
@@ -1000,13 +1010,33 @@ export default defineComponent({
     };
 
     // Challenge management functions
-    const acceptChallenge = (challenge) => {
-      $q.notify({
-        type: 'positive',
-        message: `Accepted challenge from ${challenge.challenger_name}!`,
-        position: 'top'
-      });
-      // TODO: Implement challenge acceptance
+    const acceptChallenge = async (challenge) => {
+      if (selectedUnits.value.length === 0) {
+        $q.notify({
+          type: 'warning',
+          message: 'You need to build an army first!',
+          position: 'top'
+        });
+        return;
+      }
+
+      try {
+        // Use game events store to accept challenge via Nostr
+        await gameEventsStore.acceptChallenge(challenge, selectedUnits.value.map(unit => ({
+          secret: unit.secret,
+          amount: unit.amount,
+          power: GameUtils.getUnitPower(unit),
+          defense: GameUtils.getUnitDefense(unit),
+          element: GameUtils.getUnitElement(unit),
+          name: GameUtils.getUnitName(unit)
+        })));
+        
+        clearArmy();
+        
+      } catch (error) {
+        console.error('Failed to accept challenge:', error);
+        // Error notification is handled by the store
+      }
     };
 
     const cancelChallenge = (challenge) => {
@@ -1037,39 +1067,29 @@ export default defineComponent({
       publishing.value = true;
       
       try {
-        // TODO: Implement actual Nostr publishing
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Mock delay
-        
-        $q.notify({
-          type: 'positive',
-          message: 'Challenge published successfully!',
-          position: 'top'
+        // Use game events store to publish to Nostr
+        await gameEventsStore.publishGameChallenge({
+          battleType: battleType.value,
+          wagerAmount: selectedUnitsValue.value,
+          wagerUnit: activeUnitLabel.value,
+          message: challengeMessage.value || 'Challenge issued!',
+          armyData: selectedUnits.value.map(unit => ({
+            secret: unit.secret,
+            amount: unit.amount,
+            power: GameUtils.getUnitPower(unit),
+            defense: GameUtils.getUnitDefense(unit),
+            element: GameUtils.getUnitElement(unit),
+            name: GameUtils.getUnitName(unit)
+          })),
+          timeLimit: timeLimit.value
         });
         
         showSuccessDialog.value = true;
-        
-        // Add to my challenges
-        const newChallenge = {
-          id: Date.now(),
-          battle_type: battleType.value,
-          wager: selectedUnitsValue.value,
-          unit: activeUnitLabel.value,
-          content: challengeMessage.value || 'Challenge issued!',
-          unit_count: selectedUnits.value.length,
-          time_limit: timeLimit.value,
-          status: 'open'
-        };
-        
-        myChallenges.value.unshift(newChallenge);
         clearArmy();
         
       } catch (error) {
         console.error('Failed to publish challenge:', error);
-        $q.notify({
-          type: 'negative',
-          message: 'Failed to publish challenge. Please try again.',
-          position: 'top'
-        });
+        // Error notification is handled by the store
       } finally {
         publishing.value = false;
       }
@@ -1078,8 +1098,8 @@ export default defineComponent({
     // Initialize component
     onMounted(async () => {
       try {
-        // Load challenges from relay
-        await loadChallenges();
+        // Initialize game events (Nostr connections)
+        await initializeGameEvents();
         
         // Debug proof data
         const rawProofsForDebug = proofsStore.proofs;
@@ -1147,7 +1167,7 @@ export default defineComponent({
       cancelChallenge,
       startBattle,
       publishChallenge,
-      loadChallenges
+      initializeGameEvents
     };
   }
 });

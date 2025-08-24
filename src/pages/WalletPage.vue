@@ -111,8 +111,8 @@
               </div>
               <q-btn
                 color="primary"
-                icon="search"
-                label="Open eCash Browser"
+                icon="games"
+                label="Do you want to play a game?"
                 @click="$router.push('/ecash-browser')"
                 size="lg"
                 class="q-px-xl"

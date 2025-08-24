@@ -51,6 +51,27 @@ const routes = [
       { path: "", component: () => import("src/pages/EcashBrowser.vue") },
     ],
   },
+  {
+    path: "/game-challenge",
+    component: () => import("layouts/FullscreenLayout.vue"),
+    children: [
+      { path: "", component: () => import("src/pages/GameChallengeNew.vue") },
+    ],
+  },
+  {
+    path: "/game-battle",
+    component: () => import("layouts/FullscreenLayout.vue"),
+    children: [
+      { path: "", component: () => import("src/pages/GameBattle.vue") },
+    ],
+  },
+  {
+    path: "/game-results",
+    component: () => import("layouts/FullscreenLayout.vue"),
+    children: [
+      { path: "", component: () => import("src/pages/GameResults.vue") },
+    ],
+  },
 
   // Always leave this as last one,
   // but you can also remove it

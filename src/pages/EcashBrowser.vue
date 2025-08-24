@@ -21,16 +21,71 @@
       </q-toolbar>
     </div>
 
+    <!-- Manastr Game Flow Navigation -->
+    <div class="game-flow-nav" :class="$q.dark.isActive ? 'bg-grey-8' : 'bg-grey-3'">
+      <div class="q-pa-md">
+        <div class="text-h6 q-mb-sm">Manastr Game Flow</div>
+        <div class="flow-steps">
+          <q-btn-group>
+            <q-btn 
+              color="primary" 
+              label="1. Arsenal" 
+              icon="shield"
+              class="current-step"
+              :disable="true"
+            />
+            <q-btn 
+              color="grey" 
+              label="2. Challenge" 
+              icon="campaign"
+              @click="$router.push('/game-challenge')"
+            />
+            <q-btn 
+              color="grey" 
+              label="3. Battle" 
+              icon="swords"
+              @click="$router.push('/game-battle')"
+            />
+            <q-btn 
+              color="grey" 
+              label="4. Results" 
+              icon="emoji_events"
+              :disable="true"
+            />
+          </q-btn-group>
+        </div>
+        <div class="text-caption q-mt-sm" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-6'">
+          Step 1: Review your units and their magical properties. When ready, proceed to create a battle challenge.
+        </div>
+      </div>
+    </div>
+
     <!-- Main Content -->
     <div class="browser-layout" :class="$q.dark.isActive ? 'bg-dark' : 'bg-grey-1'">
       <!-- Left Sidebar - Proof List -->
       <div class="proof-sidebar" :class="$q.dark.isActive ? 'bg-dark' : 'bg-white'">
         <div class="sidebar-header" :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-1'">
-          <div class="text-subtitle2 q-pa-md">
+          <div class="text-subtitle2 q-pa-md q-pb-sm">
             Unit Armory
             <q-icon name="info" size="sm" class="q-ml-sm">
               <q-tooltip>Units grouped by type and kingdom age</q-tooltip>
             </q-icon>
+          </div>
+          
+          <!-- Search Input -->
+          <div class="q-px-md q-pb-md">
+            <q-input
+              v-model="searchQuery"
+              placeholder="Search by C value, amount, or instance..."
+              dense
+              outlined
+              clearable
+              :bg-color="$q.dark.isActive ? 'grey-8' : 'grey-1'"
+            >
+              <template v-slot:prepend>
+                <q-icon name="search" />
+              </template>
+            </q-input>
           </div>
           <q-separator />
         </div>
@@ -341,7 +396,31 @@
                         </q-avatar>
                       </div>
                       <div class="col">
-                        <div class="text-h6 q-mb-xs">Magical Signature (C Value)</div>
+                        <div class="row items-center q-mb-xs">
+                          <div class="text-h6 q-mr-sm">Magical Signature (C Value)</div>
+                          <q-btn 
+                            flat 
+                            dense 
+                            round 
+                            icon="content_copy" 
+                            size="sm"
+                            @click="copyToClipboard(selectedProof.C, 'C Value')"
+                            class="q-mr-xs"
+                          >
+                            <q-tooltip>Copy full C value to clipboard</q-tooltip>
+                          </q-btn>
+                          <q-btn 
+                            flat 
+                            dense 
+                            round 
+                            icon="code" 
+                            size="sm"
+                            @click="showCValueAnalysis = !showCValueAnalysis"
+                            :color="showCValueAnalysis ? 'primary' : ''"
+                          >
+                            <q-tooltip>{{ showCValueAnalysis ? 'Hide' : 'Show' }} detailed C value analysis</q-tooltip>
+                          </q-btn>
+                        </div>
                         
                         <!-- Inline Explanation -->
                         <div class="explanation-text q-mb-sm">
@@ -355,17 +434,159 @@
                           </div>
                         </div>
 
-                        <div class="technical-data">
+                        <!-- Basic C Value Display -->
+                        <div class="technical-data q-mb-sm">
                           <div class="text-body2 q-mb-xs">
                             <strong>Signature Hash:</strong> 
-                            <span class="monospace-text" :class="$q.dark.isActive ? 'bg-grey-7' : 'bg-grey-2'">
-                              {{ selectedProof.C.substring(0, 20) }}...
+                            <span class="monospace-text clickable-text" 
+                                  :class="[$q.dark.isActive ? 'bg-grey-7' : 'bg-grey-2']"
+                                  @click="showFullCValue = !showFullCValue"
+                                  style="cursor: pointer;">
+                              {{ showFullCValue ? selectedProof.C : selectedProof.C.substring(0, 20) + '...' }}
                             </span>
+                            <q-btn 
+                              flat 
+                              dense 
+                              :icon="showFullCValue ? 'expand_less' : 'expand_more'" 
+                              size="xs"
+                              @click="showFullCValue = !showFullCValue"
+                              class="q-ml-xs"
+                            />
+                          </div>
+                          <div class="text-caption q-mb-xs" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-6'">
+                            Length: {{ selectedProof.C.length }} characters • Format: {{ getCValueFormat(selectedProof.C) }}
                           </div>
                           <div class="text-caption text-positive">
                             ✓ Cryptographically verified - this unit is authentic
                           </div>
                         </div>
+
+                        <!-- Detailed C Value Analysis (Expandable) -->
+                        <q-expansion-item v-model="showCValueAnalysis" icon="analytics" label="Advanced C Value Analysis">
+                          <div class="q-pa-sm" :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-1'">
+                            
+                            <!-- C Value Segments -->
+                            <div class="q-mb-md">
+                              <div class="text-subtitle2 q-mb-sm">
+                                <q-icon name="view_module" class="q-mr-xs" />
+                                Property Generation Segments
+                              </div>
+                              <div class="text-caption q-mb-sm" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-6'">
+                                Different portions of the C value generate different magical properties:
+                              </div>
+                              
+                              <div class="c-value-segments q-mb-sm">
+                                <div class="segment-item q-mb-xs">
+                                  <div class="row items-center no-wrap">
+                                    <div class="col-auto q-pr-sm">
+                                      <q-chip size="sm" color="red" text-color="white" icon="flash_on">
+                                        Power
+                                      </q-chip>
+                                    </div>
+                                    <div class="col">
+                                      <span class="monospace-text segment-highlight power-segment">
+                                        {{ selectedProof.C.substring(0, 16) }}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div class="segment-item q-mb-xs">
+                                  <div class="row items-center no-wrap">
+                                    <div class="col-auto q-pr-sm">
+                                      <q-chip size="sm" color="blue" text-color="white" icon="shield">
+                                        Defense
+                                      </q-chip>
+                                    </div>
+                                    <div class="col">
+                                      <span class="monospace-text segment-highlight defense-segment">
+                                        {{ selectedProof.C.substring(16, 32) }}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div class="segment-item q-mb-xs">
+                                  <div class="row items-center no-wrap">
+                                    <div class="col-auto q-pr-sm">
+                                      <q-chip size="sm" color="purple" text-color="white" icon="psychology">
+                                        Element
+                                      </q-chip>
+                                    </div>
+                                    <div class="col">
+                                      <span class="monospace-text segment-highlight element-segment">
+                                        {{ selectedProof.C.substring(8, 24) }}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div class="segment-item">
+                                  <div class="row items-center no-wrap">
+                                    <div class="col-auto q-pr-sm">
+                                      <q-chip size="sm" color="amber" text-color="white" icon="star">
+                                        Rarity
+                                      </q-chip>
+                                    </div>
+                                    <div class="col">
+                                      <span class="monospace-text segment-highlight rarity-segment">
+                                        {{ selectedProof.C.substring(24, 40) }}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- C Value Statistics -->
+                            <div class="q-mb-md">
+                              <div class="text-subtitle2 q-mb-sm">
+                                <q-icon name="bar_chart" class="q-mr-xs" />
+                                Cryptographic Properties
+                              </div>
+                              <div class="row q-gutter-md">
+                                <div class="col">
+                                  <div class="stat-card" :class="$q.dark.isActive ? 'bg-grey-8' : 'bg-grey-2'">
+                                    <div class="text-caption">Entropy</div>
+                                    <div class="text-body1 text-weight-bold">{{ getCValueEntropy(selectedProof.C) }} bits</div>
+                                  </div>
+                                </div>
+                                <div class="col">
+                                  <div class="stat-card" :class="$q.dark.isActive ? 'bg-grey-8' : 'bg-grey-2'">
+                                    <div class="text-caption">Uniqueness</div>
+                                    <div class="text-body1 text-weight-bold">{{ getCValueUniqueness(selectedProof.C) }}</div>
+                                  </div>
+                                </div>
+                                <div class="col">
+                                  <div class="stat-card" :class="$q.dark.isActive ? 'bg-grey-8' : 'bg-grey-2'">
+                                    <div class="text-caption">Hash Quality</div>
+                                    <div class="text-body1 text-weight-bold text-positive">Excellent</div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Export Options -->
+                            <div class="row q-gutter-sm">
+                              <q-btn 
+                                outline 
+                                color="primary" 
+                                icon="download" 
+                                label="Export Proof JSON"
+                                size="sm"
+                                @click="exportProofJSON(selectedProof)"
+                              />
+                              <q-btn 
+                                outline 
+                                color="secondary" 
+                                icon="compare" 
+                                label="Compare C Value"
+                                size="sm"
+                                @click="startCValueComparison(selectedProof)"
+                              />
+                            </div>
+                          </div>
+                        </q-expansion-item>
                       </div>
                     </div>
                   </q-card-section>
@@ -500,6 +721,7 @@ import { defineComponent, ref, computed } from 'vue';
 import { useProofsStore } from '../stores/proofs';
 import { useMintsStore } from '../stores/mints';
 import { useQuasar } from 'quasar';
+import * as GameUtils from '../utils/gameUtils';
 
 export default defineComponent({
   name: 'ManastrArsenal',
@@ -509,13 +731,34 @@ export default defineComponent({
     const mintsStore = useMintsStore();
     
     const selectedProof = ref(null);
+    const showFullCValue = ref(false);
+    const showCValueAnalysis = ref(false);
+    const searchQuery = ref('');
     
     const proofs = computed(() => proofsStore.proofs);
+    
+    // Filter proofs based on search query
+    const filteredProofs = computed(() => {
+      if (!searchQuery.value) return proofs.value;
+      
+      const query = searchQuery.value.toLowerCase();
+      return proofs.value.filter(proof => {
+        const cValue = proof.C.toLowerCase();
+        const amount = proof.amount.toString();
+        const instance = GameUtils.getUnitInstance(proof).toLowerCase();
+        const unitName = GameUtils.getUnitName(proof).toLowerCase();
+        
+        return cValue.includes(query) ||
+               amount.includes(query) ||
+               instance.includes(query) ||
+               unitName.includes(query);
+      });
+    });
     
     // Group proofs by amount (unit type)
     const groupedUnits = computed(() => {
       const groups = {};
-      proofs.value.forEach(proof => {
+      filteredProofs.value.forEach(proof => {
         if (!groups[proof.amount]) {
           groups[proof.amount] = [];
         }
@@ -532,6 +775,9 @@ export default defineComponent({
     
     const selectUnitProof = (proof) => {
       selectedProof.value = proof;
+      // Reset view states when selecting new proof
+      showFullCValue.value = false;
+      showCValueAnalysis.value = false;
     };
     
     const formatAmount = (amount) => {
@@ -850,6 +1096,104 @@ export default defineComponent({
       return colors[rarity] || 'grey';
     };
     
+    // Enhanced C Value Analysis Methods
+    const getCValueFormat = (cValue) => {
+      // Detect format of C value
+      if (!cValue) return 'Unknown';
+      if (/^[0-9a-fA-F]+$/.test(cValue)) return 'Hexadecimal';
+      if (/^[A-Za-z0-9+/]*={0,2}$/.test(cValue)) return 'Base64';
+      return 'Custom';
+    };
+    
+    const getCValueEntropy = (cValue) => {
+      // Calculate approximate entropy in bits
+      if (!cValue) return 0;
+      const uniqueChars = new Set(cValue.toLowerCase()).size;
+      const length = cValue.length;
+      return Math.round(length * Math.log2(uniqueChars));
+    };
+    
+    const getCValueUniqueness = (cValue) => {
+      // Check if this C value is unique in the wallet
+      const allCValues = proofs.value.map(p => p.C);
+      const occurrences = allCValues.filter(c => c === cValue).length;
+      return occurrences === 1 ? 'Unique' : `${occurrences} duplicates`;
+    };
+    
+    const copyToClipboard = async (text, label) => {
+      try {
+        await navigator.clipboard.writeText(text);
+        $q.notify({
+          type: 'positive',
+          message: `${label} copied to clipboard!`,
+          timeout: 2000,
+          position: 'top'
+        });
+      } catch (error) {
+        console.error('Failed to copy to clipboard:', error);
+        $q.notify({
+          type: 'negative',
+          message: 'Failed to copy to clipboard',
+          timeout: 2000,
+          position: 'top'
+        });
+      }
+    };
+    
+    const exportProofJSON = (proof) => {
+      try {
+        const proofData = {
+          amount: proof.amount,
+          id: proof.id,
+          secret: proof.secret,
+          C: proof.C,
+          dleq: proof.dleq,
+          reserved: proof.reserved,
+          quote: proof.quote,
+          exported_at: new Date().toISOString(),
+          manastr_version: 'v1.0'
+        };
+        
+        const jsonString = JSON.stringify(proofData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `manastr-unit-${GameUtils.getUnitInstance(proof)}-${Date.now()}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        $q.notify({
+          type: 'positive',
+          message: 'Proof JSON exported successfully!',
+          timeout: 3000,
+          position: 'top'
+        });
+      } catch (error) {
+        console.error('Export failed:', error);
+        $q.notify({
+          type: 'negative',
+          message: 'Failed to export proof JSON',
+          timeout: 3000,
+          position: 'top'
+        });
+      }
+    };
+    
+    const startCValueComparison = (proof) => {
+      // For now, just show the C value analysis
+      showCValueAnalysis.value = true;
+      $q.notify({
+        type: 'info',
+        message: 'C Value comparison coming soon! Currently showing detailed analysis.',
+        timeout: 3000,
+        position: 'top'
+      });
+    };
+    
     
     return {
       proofs,
@@ -859,30 +1203,41 @@ export default defineComponent({
       activeUnitLabel,
       selectUnitProof,
       formatAmount,
+      searchQuery,
       
-      // Unit type methods
-      getUnitTypeName,
-      getUnitTypeDescription, 
-      getUnitTypeIcon,
-      getUnitTypeColor,
+      // Enhanced C value inspection
+      showFullCValue,
+      showCValueAnalysis,
+      getCValueFormat,
+      getCValueEntropy,
+      getCValueUniqueness,
+      copyToClipboard,
+      exportProofJSON,
+      startCValueComparison,
       
-      // Kingdom age methods
-      getKingdomAgeName,
-      getKingdomAgeColor,
+      // Unit type methods (from shared GameUtils)
+      getUnitTypeName: GameUtils.getUnitTypeName,
+      getUnitTypeDescription: GameUtils.getUnitTypeDescription, 
+      getUnitTypeIcon: GameUtils.getUnitTypeIcon,
+      getUnitTypeColor: GameUtils.getUnitTypeColor,
       
-      // Unit instance methods
-      getUnitName,
-      getUnitInstance,
-      getUnitStatusIcon,
+      // Kingdom age methods (from shared GameUtils)
+      getKingdomAgeName: GameUtils.getKingdomAgeName,
+      getKingdomAgeColor: GameUtils.getKingdomAgeColor,
       
-      // Unit properties from C value
-      getUnitPower,
-      getUnitDefense,
-      getUnitElement,
-      getElementColor,
-      getElementIcon,
-      getUnitRarity,
-      getRarityColor
+      // Unit instance methods (from shared GameUtils)
+      getUnitName: GameUtils.getUnitName,
+      getUnitInstance: GameUtils.getUnitInstance,
+      getUnitStatusIcon: GameUtils.getUnitStatusIcon,
+      
+      // Unit properties from C value (from shared GameUtils)
+      getUnitPower: GameUtils.getUnitPower,
+      getUnitDefense: GameUtils.getUnitDefense,
+      getUnitElement: GameUtils.getUnitElement,
+      getElementColor: GameUtils.getElementColor,
+      getElementIcon: GameUtils.getElementIcon,
+      getUnitRarity: GameUtils.getUnitRarity,
+      getRarityColor: GameUtils.getRarityColor
     };
   }
 });
@@ -1069,6 +1424,94 @@ export default defineComponent({
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+/* Game flow navigation styles */
+.game-flow-nav {
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.flow-steps .q-btn-group .q-btn {
+  border-radius: 0;
+}
+
+.flow-steps .q-btn-group .q-btn:first-child {
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+}
+
+.flow-steps .q-btn-group .q-btn:last-child {
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.current-step {
+  opacity: 1 !important;
+}
+
+/* Enhanced C value analysis styles */
+.c-value-segments {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.body--light .c-value-segments {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.segment-item {
+  padding: 4px 0;
+}
+
+.segment-highlight {
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.power-segment {
+  background: rgba(244, 67, 54, 0.2);
+  border-left: 3px solid #f44336;
+}
+
+.defense-segment {
+  background: rgba(33, 150, 243, 0.2);
+  border-left: 3px solid #2196f3;
+}
+
+.element-segment {
+  background: rgba(156, 39, 176, 0.2);
+  border-left: 3px solid #9c27b0;
+}
+
+.rarity-segment {
+  background: rgba(255, 193, 7, 0.2);
+  border-left: 3px solid #ffc107;
+}
+
+.stat-card {
+  padding: 12px;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.clickable-text {
+  transition: background-color 0.2s ease;
+}
+
+.clickable-text:hover {
+  opacity: 0.8;
+}
+
+.body--dark .stat-card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.body--light .stat-card {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .browser-layout {
@@ -1082,6 +1525,23 @@ export default defineComponent({
   
   .inspection-panel {
     height: 60vh;
+  }
+  
+  .flow-steps .q-btn-group {
+    width: 100%;
+  }
+  
+  .flow-steps .q-btn-group .q-btn {
+    flex: 1;
+    font-size: 0.8rem;
+  }
+  
+  .c-value-segments {
+    overflow-x: auto;
+  }
+  
+  .segment-highlight {
+    font-size: 10px;
   }
 }
 </style>

@@ -15,6 +15,33 @@
           Manastr Challenge Builder
         </q-toolbar-title>
         <q-space />
+        <!-- Debug info for Nostr status -->
+        <q-btn 
+          flat 
+          dense 
+          icon="wifi" 
+          @click="testNostrConnection" 
+          :color="gameEventsStore.isInitialized ? 'positive' : 'negative'"
+        >
+          <q-tooltip>{{ gameEventsStore.isInitialized ? 'Nostr Connected' : 'Nostr Disconnected - Click to test' }}</q-tooltip>
+        </q-btn>
+        <q-btn 
+          flat 
+          dense 
+          icon="refresh" 
+          @click="refreshChallenges"
+          :loading="refreshingChallenges"
+        >
+          <q-tooltip>Refresh Challenges</q-tooltip>
+        </q-btn>
+        <q-btn 
+          flat 
+          dense 
+          icon="troubleshoot" 
+          @click="testRelayConnection"
+        >
+          <q-tooltip>Test Relay Connection</q-tooltip>
+        </q-btn>
         <div class="text-caption">
           Army: {{ selectedUnits.length }}/10 units | {{ selectedUnitsValue }} {{ activeUnitLabel }} wager
         </div>
@@ -774,6 +801,7 @@ export default defineComponent({
     // Core data
     const selectedUnits = ref([]);
     const publishing = ref(false);
+    const refreshingChallenges = ref(false);
     const showSuccessDialog = ref(false);
     const activeTab = ref('build-army');
     
@@ -809,14 +837,261 @@ export default defineComponent({
     
     // Initialize game events
     const initializeGameEvents = async () => {
+      console.log('🏗️ Starting game events initialization...');
       try {
         await gameEventsStore.initializeGameEvents();
-        console.log('Game events initialized successfully');
+        console.log('🏗️ Game events initialized successfully');
+        
+        // Also try to force a test connection
+        console.log('🏗️ Testing connection by subscribing to a simple filter...');
+        const testFilter = { kinds: [1], limit: 1 };
+        console.log('🏗️ Test filter:', testFilter);
+        
       } catch (error) {
-        console.error('Failed to initialize game events:', error);
+        console.error('🏗️ Failed to initialize game events:', error);
         $q.notify({
           type: 'warning',
           message: 'Could not connect to game network. Some features may not work.',
+          position: 'top'
+        });
+      }
+    };
+
+    // Test Nostr connection manually
+    const testNostrConnection = async () => {
+      console.log('🧪 Manual Nostr test triggered');
+      console.log('🧪 Current game events store state:', {
+        isInitialized: gameEventsStore.isInitialized,
+        connectedRelays: gameEventsStore.connectedRelays
+      });
+      
+      // Force re-initialization
+      gameEventsStore.isInitialized = false;
+      await initializeGameEvents();
+      
+      // Test publishing a simple event
+      console.log('🧪 Testing simple event publication...');
+      try {
+        const { useNostrStore } = await import('../stores/nostr');
+        const nostrStore = useNostrStore();
+        const NDK = (await import('@nostr-dev-kit/ndk')).NDKEvent;
+        
+        const testEvent = new NDK();
+        testEvent.kind = 1; // Simple text note
+        testEvent.content = `Test from Manastr at ${new Date().toISOString()}`;
+        testEvent.tags = [['t', 'manastr-test']];
+        testEvent.ndk = nostrStore.ndk;
+        
+        console.log('🧪 Publishing test event...');
+        await testEvent.sign();
+        const result = await testEvent.publish();
+        console.log('🧪 Test event published:', testEvent.id, 'result:', result);
+        
+        // Test querying for challenges
+        console.log('🧪 Testing challenge query...');
+        const challengeQuery = [{ 
+          kinds: [30402], 
+          '#t': ['manastr', 'game-challenge'],
+          limit: 10 
+        }];
+        console.log('🧪 Challenge query filter:', challengeQuery);
+        
+        const challenges = await nostrStore.ndk.fetchEvents(challengeQuery);
+        console.log('🧪 Found challenges:', challenges?.size || 0);
+        if (challenges && challenges.size > 0) {
+          challenges.forEach(challenge => {
+            console.log('🧪 Challenge:', {
+              id: challenge.id?.slice(0, 8) + '...',
+              author: challenge.pubkey.slice(0, 8) + '...',
+              tags: challenge.tags,
+              content: challenge.content.slice(0, 50) + '...'
+            });
+          });
+        }
+        
+        $q.notify({
+          type: 'positive',
+          message: `Test complete: Published event, found ${challenges?.size || 0} challenges`,
+          position: 'top'
+        });
+      } catch (error) {
+        console.error('🧪 Failed to publish test event:', error);
+        $q.notify({
+          type: 'negative',
+          message: 'Failed to publish test event',
+          position: 'top'
+        });
+      }
+    };
+
+    // Reserved units from active challenges
+    const reservedUnitSecrets = computed(() => {
+      const reserved = new Set();
+      
+      console.log('🔒 Computing reserved units...');
+      
+      // Add units from our open/accepted challenges
+      myChallenges.value
+        .filter(challenge => challenge.status === 'open' || challenge.status === 'accepted')
+        .forEach(challenge => {
+          if (challenge.armySecrets) {
+            challenge.armySecrets.forEach(secret => {
+              reserved.add(secret);
+              console.log('🔒 Reserved unit from challenge:', secret.slice(0, 8) + '...');
+            });
+          }
+        });
+      
+      console.log('🔒 Total reserved units:', reserved.size);
+      return reserved;
+    });
+
+    // Refresh challenges manually
+    const refreshChallenges = async () => {
+      console.log('🔄 Manual challenge refresh triggered');
+      refreshingChallenges.value = true;
+      
+      try {
+        const { useNostrStore } = await import('../stores/nostr');
+        const nostrStore = useNostrStore();
+        
+        // First, check relay connection status
+        console.log('🔄 Relay connection check:');
+        console.log('  - NDK initialized:', !!nostrStore.ndk);
+        console.log('  - Connected relays:', nostrStore.connectedRelays?.length || 0);
+        console.log('  - Relay URLs:', nostrStore.relays?.map(r => typeof r === 'string' ? r : r.url || r));
+        
+        // Check if connected to localhost:7777
+        const localhostConnected = nostrStore.relays?.some(r => {
+          const url = typeof r === 'string' ? r : r.url || r;
+          return url.includes('localhost:7777');
+        });
+        console.log('  - localhost:7777 connected:', localhostConnected);
+        
+        const challengeQuery = [{ 
+          kinds: [30402], 
+          '#t': ['manastr', 'game-challenge'],
+          since: Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60), // Last 7 days
+          limit: 50 
+        }];
+        
+        console.log('🔄 Querying for challenges...', challengeQuery);
+        
+        // Try a broader query first to see if we get any 30402 events at all
+        const broadQuery = [{ kinds: [30402], limit: 20 }];
+        console.log('🔄 Also trying broader query:', broadQuery);
+        
+        const [challenges, broadResults] = await Promise.all([
+          nostrStore.ndk.fetchEvents(challengeQuery),
+          nostrStore.ndk.fetchEvents(broadQuery)
+        ]);
+        
+        console.log('🔄 Found challenges with filter:', challenges?.size || 0);
+        console.log('🔄 Found broad 30402 events:', broadResults?.size || 0);
+        
+        // Log details of broad results
+        if (broadResults && broadResults.size > 0) {
+          console.log('🔄 Broad results details:');
+          Array.from(broadResults).forEach((event, i) => {
+            console.log(`  [${i}] Author: ${event.pubkey.slice(0, 8)}..., Tags: ${event.tags?.map(t => `${t[0]}:${(t[1] || '').slice(0, 20)}`).join(', ')}`);
+          });
+        }
+        
+        if (challenges && challenges.size > 0) {
+          console.log('🔄 Processing found challenges...');
+          challenges.forEach(challenge => {
+            console.log('🔄 Challenge details:', {
+              id: challenge.id?.slice(0, 8) + '...',
+              author: challenge.pubkey.slice(0, 8) + '...',
+              isOurPubkey: challenge.pubkey === nostrStore.pubkey,
+              tags: challenge.tags?.map(t => t[0] + ':' + (t[1]?.slice(0, 20) || '')).join(', '),
+            });
+            
+            // Manually trigger event processing
+            gameEventsStore.handleChallengeEvent(challenge);
+          });
+        }
+        
+        $q.notify({
+          type: 'positive',
+          message: `Found ${challenges?.size || 0} challenges`,
+          position: 'top'
+        });
+        
+      } catch (error) {
+        console.error('🔄 Failed to refresh challenges:', error);
+        $q.notify({
+          type: 'negative',
+          message: 'Failed to refresh challenges',
+          position: 'top'
+        });
+      } finally {
+        refreshingChallenges.value = false;
+      }
+    };
+
+    // Test relay connection
+    const testRelayConnection = async () => {
+      console.log('🧪 Testing relay connection...');
+      
+      try {
+        const { useNostrStore } = await import('../stores/nostr');
+        const nostrStore = useNostrStore();
+        
+        // Test direct WebSocket connection to localhost:7777
+        console.log('🧪 Testing direct WebSocket connection...');
+        const ws = new WebSocket('ws://localhost:7777');
+        
+        ws.onopen = () => {
+          console.log('🧪 ✅ WebSocket connection to localhost:7777 successful');
+          
+          // Send a basic REQ to test the relay
+          const req = JSON.stringify(['REQ', 'test-sub-' + Date.now(), { kinds: [1], limit: 1 }]);
+          console.log('🧪 Sending test REQ:', req);
+          ws.send(req);
+        };
+        
+        ws.onmessage = (event) => {
+          console.log('🧪 📨 Received message:', event.data);
+        };
+        
+        ws.onerror = (error) => {
+          console.error('🧪 ❌ WebSocket error:', error);
+        };
+        
+        ws.onclose = (event) => {
+          console.log('🧪 WebSocket closed:', event.code, event.reason);
+        };
+        
+        // Close connection after 3 seconds
+        setTimeout(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.close();
+          }
+        }, 3000);
+        
+        // Also test NDK connection status
+        console.log('🧪 NDK connection status:');
+        console.log('  - NDK initialized:', !!nostrStore.ndk);
+        console.log('  - Pubkey available:', !!nostrStore.pubkey);
+        if (nostrStore.ndk?.pool?.relays) {
+          console.log('  - NDK relay pool:');
+          Array.from(nostrStore.ndk.pool.relays.entries()).forEach(([url, relay]) => {
+            console.log(`    ${url}: status=${relay.connectivity?.status}, connected=${relay.connectivity?.status === 1}`);
+          });
+        }
+        
+        $q.notify({
+          type: 'info',
+          message: 'Relay connection test started - check console',
+          position: 'top'
+        });
+        
+      } catch (error) {
+        console.error('🧪 Test failed:', error);
+        $q.notify({
+          type: 'negative',
+          message: 'Relay test failed - check console',
           position: 'top'
         });
       }
@@ -835,7 +1110,14 @@ export default defineComponent({
           return [];
         }
         console.log('Available proofs:', rawProofs.length);
-        return rawProofs.filter(proof => proof && typeof proof === 'object' && proof.amount && proof.C && proof.secret);
+        const reservedSecrets = reservedUnitSecrets.value;
+        
+        return rawProofs
+          .filter(proof => proof && typeof proof === 'object' && proof.amount && proof.C && proof.secret)
+          .map(proof => ({
+            ...proof,
+            reserved: reservedSecrets.has(proof.secret) // Mark reserved units
+          }));
       } catch (error) {
         console.error('Error accessing proofs store:', error);
         return [];
@@ -927,7 +1209,12 @@ export default defineComponent({
       console.log('toggleUnitSelection called for:', proof);
       
       if (proof.reserved) {
-        console.log('Unit is reserved, cannot select');
+        console.log('🔒 Unit is reserved, cannot select');
+        $q.notify({
+          type: 'warning',
+          message: 'This unit is already committed to an active challenge',
+          position: 'top'
+        });
         return; // Can't select reserved units
       }
       
@@ -1115,6 +1402,9 @@ export default defineComponent({
     });
     
     return {
+      // Stores
+      gameEventsStore,
+      
       // Data
       selectedUnits,
       activeTab,
@@ -1167,7 +1457,12 @@ export default defineComponent({
       cancelChallenge,
       startBattle,
       publishChallenge,
-      initializeGameEvents
+      initializeGameEvents,
+      testNostrConnection,
+      refreshChallenges,
+      testRelayConnection,
+      refreshingChallenges,
+      reservedUnitSecrets
     };
   }
 });

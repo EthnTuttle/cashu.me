@@ -109,67 +109,47 @@ export const useGameEventsStore = defineStore('gameEvents', {
 
   actions: {
     async initializeGameEvents() {
-      console.log('🎮 Initializing game events...');
-      
       if (this.isInitialized) {
-        console.log('🎮 Already initialized');
         return;
       }
       
       const nostrStore = useNostrStore();
-      console.log('🎮 Nostr store state:', {
-        initialized: nostrStore.initialized,
-        connected: nostrStore.connected,
-        pubkey: nostrStore.pubkey?.slice(0, 8) + '...',
-        relaysCount: nostrStore.relays?.length
-      });
       
       try {
         // Initialize Nostr if not already done
         if (!nostrStore.initialized) {
-          console.log('🎮 Initializing Nostr signer...');
           await nostrStore.initSignerIfNotSet();
-          console.log('🎮 Nostr signer initialized');
         }
         
         // Connect to relays
-        console.log('🎮 Connecting to relays...');
         await this.connectToRelays();
         
         // Start listening for game events
-        console.log('🎮 Starting event subscriptions...');
         await this.subscribeToGameEvents();
         
         this.isInitialized = true;
-        console.log('🎮 Game events store initialized successfully');
         
       } catch (error) {
-        console.error('🎮 Failed to initialize game events:', error);
+        console.error('Failed to initialize game events:', error);
         notifyError('Failed to connect to game relays');
       }
     },
 
     async connectToRelays() {
       const nostrStore = useNostrStore();
-      console.log('🔗 Connecting to relays...', nostrStore.relays);
-      console.log('🔗 Raw relay list:', JSON.stringify(nostrStore.relays));
       
       // Check if localhost:7777 is in the list
       const hasLocalhost = nostrStore.relays.some(relay => 
         (typeof relay === 'string' ? relay : relay.url || relay).includes('localhost:7777')
       );
-      console.log('🔗 Has localhost:7777 relay?', hasLocalhost);
       
       // Force add localhost:7777 if missing
       if (!hasLocalhost) {
-        console.log('🔗 Adding localhost:7777 to relay list');
         nostrStore.relays.unshift('ws://localhost:7777');
-        console.log('🔗 Updated relay list:', JSON.stringify(nostrStore.relays));
       }
       
       // Recreate NDK with updated relay list if localhost was added
       if (!hasLocalhost || !nostrStore.ndk) {
-        console.log('🔗 Creating new NDK connection with updated relays...');
         try {
           // Create fresh NDK with updated relay list
           const NDK = (await import('@nostr-dev-kit/ndk')).default;
@@ -178,9 +158,8 @@ export const useGameEventsStore = defineStore('gameEvents', {
             signer: nostrStore.signer 
           });
           await nostrStore.ndk.connect();
-          console.log('🔗 NDK created and connected with updated relay list');
         } catch (error) {
-          console.error('🔗 Failed to create new NDK:', error);
+          console.error('Failed to create new NDK:', error);
           // Fallback to existing initialization
           if (!nostrStore.ndk) {
             nostrStore.initNdkReadOnly();
@@ -189,27 +168,14 @@ export const useGameEventsStore = defineStore('gameEvents', {
       }
       
       if (!nostrStore.ndk.pool) {
-        console.log('🔗 Connecting existing NDK...');
         await nostrStore.ndk.connect();
       }
       
       // Wait a moment for connections to establish
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Force connection check
-      console.log('🔗 NDK pool status:', nostrStore.ndk.pool?.relays?.size || 0, 'relays');
-      
-      // Check actual relay connections
-      if (nostrStore.ndk.pool?.relays) {
-        nostrStore.ndk.pool.relays.forEach((relay, url) => {
-          console.log(`🔗 Relay ${url}: status=${relay.connectivity?.status}, connected=${relay.connectivity?.status === 1}`);
-        });
-      }
-      
       // Track connected relays
       this.connectedRelays = nostrStore.relays;
-      console.log('🔗 Connected to relays:', this.connectedRelays);
-      console.log('🔗 Relay URLs:', nostrStore.relays.map(r => typeof r === 'string' ? r : r.url || r));
     },
 
     async publishGameChallenge(challengeData: {
@@ -284,21 +250,8 @@ ${challengeData.message}
 
         // Set NDK instance for signing
         event.ndk = nostrStore.ndk;
-        console.log('🚀 About to sign/publish challenge event:');
-        console.log('  - Event kind:', event.kind);
-        console.log('  - Event tags:', event.tags);
-        console.log('  - Connected relays:', nostrStore.relays?.length);
-        console.log('  - Content preview:', event.content.slice(0, 100) + '...');
-        
         await event.sign();
-        console.log('🚀 Signed event, publishing to relays...', event.id);
-        const publishResult = await event.publish();
-        console.log('🚀 Challenge publish result:', publishResult);
-        
-        // Log which relays we published to
-        if (publishResult && typeof publishResult === 'object') {
-          console.log('🚀 Publish details:', Object.keys(publishResult).length, 'relay responses');
-        }
+        await event.publish();
 
         // Add to local state
         const challenge: GameChallenge = {
@@ -399,14 +352,7 @@ ${challengeData.message}
     async subscribeToGameEvents() {
       const nostrStore = useNostrStore();
       
-      console.log('📡 Setting up subscriptions...', {
-        hasNdk: !!nostrStore.ndk,
-        hasPubkey: !!nostrStore.pubkey,
-        pubkey: nostrStore.pubkey?.slice(0, 8) + '...'
-      });
-      
       if (!nostrStore.ndk || !nostrStore.pubkey) {
-        console.warn('📡 NDK or pubkey not available for subscription');
         return;
       }
 
@@ -414,60 +360,72 @@ ${challengeData.message}
         // Subscribe to Manastr game challenges (NIP-99 classified listings)
         const challengeFilter: NDKFilter = {
           kinds: [MANASTR_EVENT_KINDS.GAME_CHALLENGE],
-          '#t': ['manastr', 'game-challenge'], // These are indexed by relays!
+          '#t': ['manastr', 'game-challenge'],
           since: Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60), // Last 7 days
           limit: 100
         };
 
-        console.log('📡 Creating challenge subscription with filter:', challengeFilter);
         this.challengeSubscription = nostrStore.ndk.subscribe(challengeFilter, { 
           closeOnEose: false 
         });
 
         this.challengeSubscription.on('event', (event: NDKEvent) => {
-          console.log('📡 Received challenge event:', event.id);
-          console.log('📡 Challenge event details:', {
-            kind: event.kind,
-            author: event.pubkey.slice(0, 8) + '...',
-            tags: event.tags,
-            content: event.content.slice(0, 100) + '...'
-          });
           this.handleChallengeEvent(event);
         });
 
         this.challengeSubscription.on('eose', () => {
-          console.log('📡 Challenge subscription: End of stored events (EOSE)');
-        console.log('📡 Current incoming challenges after EOSE:', this.incomingChallenges.length);
-        console.log('📡 Current my challenges after EOSE:', this.myChallenges.length);
+          // Force a manual query if no events were received
+          if (this.incomingChallenges.length === 0 && this.myChallenges.length === 0) {
+            this.manualFetchChallenges();
+          }
         });
 
         // Subscribe to challenge responses, game moves and results
         const gameFilter: NDKFilter = {
           kinds: [
-            MANASTR_EVENT_KINDS.CHALLENGE_RESPONSE, // NIP-22 comments
-            MANASTR_EVENT_KINDS.GAME_MOVE,          // Regular events
-            MANASTR_EVENT_KINDS.GAME_RESULT         // Regular events
+            MANASTR_EVENT_KINDS.CHALLENGE_RESPONSE,
+            MANASTR_EVENT_KINDS.GAME_MOVE,
+            MANASTR_EVENT_KINDS.GAME_RESULT
           ],
-          '#t': ['manastr'], // Filter by manastr category
+          '#t': ['manastr'],
           since: Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60), // Last 7 days
           limit: 200
         };
 
-        console.log('📡 Creating game events subscription with filter:', gameFilter);
         this.gameSubscription = nostrStore.ndk.subscribe(gameFilter, {
           closeOnEose: false
         });
 
         this.gameSubscription.on('event', (event: NDKEvent) => {
-          console.log('📡 Received game event:', event.kind, event.id);
           this.handleGameEvent(event);
         });
-
-        console.log('📡 Subscribed to Manastr game events successfully');
         
       } catch (error) {
-        console.error('📡 Failed to subscribe to game events:', error);
+        console.error('Failed to subscribe to game events:', error);
         notifyWarning('Failed to connect to game network');
+      }
+    },
+
+    async manualFetchChallenges() {
+      const nostrStore = useNostrStore();
+      
+      try {
+        const challengeQuery = [{ 
+          kinds: [MANASTR_EVENT_KINDS.GAME_CHALLENGE],
+          '#t': ['manastr', 'game-challenge'],
+          since: Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60), // Last 7 days
+          limit: 50 
+        }];
+        
+        const events = await nostrStore.ndk.fetchEvents(challengeQuery);
+        
+        if (events && events.size > 0) {
+          events.forEach(event => {
+            this.handleChallengeEvent(event);
+          });
+        }
+      } catch (error) {
+        console.error('Manual fetch failed:', error);
       }
     },
 
@@ -488,14 +446,6 @@ ${challengeData.message}
         const battleType = title.replace(' Challenge', '') || 'Standard Battle';
         const status = event.tagValue('status');
         
-        console.log('🎯 Processing challenge event:', {
-          title,
-          battleType,
-          wagerAmount,
-          wagerUnit,
-          status,
-          author: event.pubkey.slice(0, 8) + '...'
-        });
         
         // Skip if challenge is sold/completed
         if (status === 'sold' || status === 'completed') {
@@ -533,31 +483,18 @@ ${challengeData.message}
 
         // Don't add our own challenges to incoming
         const nostrStore = useNostrStore();
-        console.log('🎯 Challenge author check:', {
-          challengerPubkey: challenge.challenger,
-          ourPubkey: nostrStore.pubkey,
-          isOurChallenge: challenge.challenger === nostrStore.pubkey
-        });
         
         if (challenge.challenger !== nostrStore.pubkey) {
           // Check if challenge already exists
           const exists = this.incomingChallenges.find(c => c.id === challenge.id);
           if (!exists) {
             this.incomingChallenges.unshift(challenge);
-            console.log('🎯 Added new incoming challenge from:', challenge.challenger.slice(0, 8) + '...');
-            console.log('🎯 Total incoming challenges now:', this.incomingChallenges.length);
-            
-            // Optional: Show notification for new challenges
-            notifySuccess(`New ${battleType} challenge received!`);
-          } else {
-            console.log('🎯 Challenge already exists, skipping');
           }
         } else {
           // Add to our challenges list
           const exists = this.myChallenges.find(c => c.id === challenge.id);
           if (!exists) {
             this.myChallenges.unshift(challenge);
-            console.log('🎯 Added our published challenge to myChallenges');
           }
         }
         
